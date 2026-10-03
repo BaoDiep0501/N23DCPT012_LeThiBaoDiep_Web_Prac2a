@@ -39,14 +39,11 @@ app.use(
   createProxyMiddleware({
     target: process.env.PRODUCT_SERVICE_URL,
     changeOrigin: true,
-    pathRewrite: (path) => `/api/products${path}`,
 
-    on: {
-      error: (err, req, res) => {
-        res.status(503).json({
-          message: "Product Service không khả dụng"
-        });
-      }
+    onError: (err, req, res) => {
+      res.status(503).json({
+        message: "Product Service không khả dụng"
+      });
     }
   })
 );
@@ -57,14 +54,11 @@ app.use(
   createProxyMiddleware({
     target: process.env.ORDER_SERVICE_URL,
     changeOrigin: true,
-    pathRewrite: (path) => `/api/orders${path}`,
 
-    on: {
-      error: (err, req, res) => {
-        res.status(503).json({
-          message: "Order Service không khả dụng"
-        });
-      }
+    onError: (err, req, res) => {
+      res.status(503).json({
+        message: "Order Service không khả dụng"
+      });
     }
   })
 );
