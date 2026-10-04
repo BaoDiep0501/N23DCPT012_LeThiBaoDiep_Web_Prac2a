@@ -3,11 +3,21 @@ require("dotenv").config();
 const { PrismaClient } = require("@prisma/client");
 const { PrismaPg } = require("@prisma/adapter-pg");
 
+const redis = require("../config/redis");
+
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
 });
 
 const prisma = new PrismaClient({ adapter });
+
+const clearProductCache = async () => {
+  const keys = await redis.keys("products:*");
+
+  if (keys.length > 0) {
+    await redis.del(...keys);
+  }
+};
 
 // GET /api/products
 const getProducts = async (req, res, next) => {
@@ -23,6 +33,14 @@ const getProducts = async (req, res, next) => {
       maxPrice,
       inStock
     } = req.query;
+
+    const cacheKey = `products:${JSON.stringify(req.query)}`;
+
+    const cachedData = await redis.get(cacheKey);
+
+    if (cachedData) {
+      return res.json(JSON.parse(cachedData));
+    }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -84,7 +102,7 @@ const getProducts = async (req, res, next) => {
       prisma.product.count({ where })
     ]);
 
-    res.json({
+    const response = {
       success: true,
       data: products,
 
@@ -94,7 +112,15 @@ const getProducts = async (req, res, next) => {
         limit: parseInt(limit),
         totalPages: Math.ceil(total / parseInt(limit))
       }
-    });
+    };
+    await redis.set(
+      cacheKey,
+      JSON.stringify(response),
+      "EX",
+      300
+    );
+
+    res.json(response);
 
   } catch (error) {
     next(error);
@@ -163,6 +189,7 @@ const createProduct = async (req, res, next) => {
         category: true
       }
     });
+    await clearProductCache();
 
     res.status(201).json({
       success: true,
@@ -190,6 +217,8 @@ const updateProduct = async (req, res, next) => {
       }
     });
 
+    await clearProductCache();
+
     res.json({
       success: true,
       data: product,
@@ -213,6 +242,8 @@ const deleteProduct = async (req, res, next) => {
         isActive: false
       }
     });
+    
+    await clearProductCache();
 
     res.json({
       success: true,
@@ -224,6 +255,44 @@ const deleteProduct = async (req, res, next) => {
   }
 };
 
+// POST /api/products/:id/image
+const uploadProductImage = async (req, res, next) => {
+  try {
+    const productId = parseInt(req.params.id);
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Chưa chọn ảnh để upload"
+      });
+    }
+
+    const product = await prisma.product.update({
+      where: {
+        id: productId
+      },
+
+      data: {
+        imageUrl: req.file.path
+      },
+
+      include: {
+        category: true
+      }
+    });
+
+    await clearProductCache();
+
+    res.json({
+      success: true,
+      data: product,
+      message: "Upload ảnh sản phẩm thành công"
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
 
 // Export các controller
 module.exports = {
@@ -231,5 +300,6 @@ module.exports = {
   getProductById,
   createProduct,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  uploadProductImage
 };

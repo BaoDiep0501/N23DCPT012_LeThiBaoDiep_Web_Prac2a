@@ -61,6 +61,7 @@ services:
 
     environment:
       DATABASE_URL: postgresql://admin:secret@postgres:5432/products_db
+      REDIS_URL: redis://redis:6379
 
     ports:
       - "3001:3001"
@@ -68,6 +69,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
 
     networks:
       - microservices-net
@@ -109,3 +112,30 @@ services:
 
     networks:
       - microservices-net
+    env_file:
+      - ./api-gateway/.env
+  
+  auth-service:
+    build: ./auth-service
+    container_name: auth_service
+
+    ports:
+      - "3003:3003"
+
+    environment:
+      DATABASE_URL: postgresql://admin:secret@postgres:5432/products_db
+
+    depends_on:
+      postgres:
+          condition: service_healthy
+    networks:
+      - microservices-net
+    env_file:
+      - ./auth-service/.env
+  
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+    - microservices-net

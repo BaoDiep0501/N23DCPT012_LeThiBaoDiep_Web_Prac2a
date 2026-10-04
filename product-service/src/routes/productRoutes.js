@@ -5,12 +5,15 @@ const {
   getProductById,
   createProduct,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  uploadProductImage
 } = require("../controllers/productController");
 
 const {
   productValidation
 } = require("../middleware/validate");
+
+const upload = require("../middleware/upload");
 
 /**
  * @swagger
@@ -124,5 +127,8 @@ router.put("/:id", updateProduct);
 
 // DELETE /api/products/:id
 router.delete("/:id", deleteProduct);
+
+// POST /api/products/:id/images
+router.post("/:id/image",upload.single("image"), uploadProductImage);
 
 module.exports = router;
