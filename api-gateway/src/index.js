@@ -3,6 +3,7 @@ const { createProxyMiddleware } = require("http-proxy-middleware");
 const rateLimit = require("express-rate-limit");
 const cors = require("cors");
 const helmet = require("helmet");
+const authenticate = require("./middleware/auth");
 
 require("dotenv").config();
 
@@ -51,15 +52,16 @@ app.use(
 // /api/orders → Order Service
 app.use(
   "/api/orders",
+  authenticate,
   createProxyMiddleware({
     target: process.env.ORDER_SERVICE_URL,
     changeOrigin: true,
 
     onError: (err, req, res) => {
       res.status(503).json({
-        message: "Order Service không khả dụng"
+        message: "Order Service không khả dụng",
       });
-    }
+    },
   })
 );
 
