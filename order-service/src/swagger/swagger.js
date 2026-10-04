@@ -13,7 +13,12 @@ const options = {
     servers: [
       {
         url: "http://localhost:3002"
+      },
+      {
+        url: "https://powerful-respect-production-0ed7.up.railway.app",
+        description: "Production"
       }
+      
     ],
 
     components: {
